@@ -16,7 +16,7 @@ Please refer to:
 
 And organize the data list as jsonl files, such as `./Whisper-Sidecar/dataset/libri2mix_train.jsonl`
 
-### Performing the Target Talker ASR Task on LibriMix and LibriSpeechMix
+### For the Target Talker ASR Task on LibriMix and LibriSpeechMix
 Please use the script `./Whisper-Sidecar/dataset/select_prompt_wav.py` to collect the enrolled prompt wav files under `./Whisper-Sidecar/dataset/enroll_audio`. 
 
 The enrolled prompt audios will be concatenate with the overlapped speech with `DataCollatorSpeechSeq2SeqWithPadding`, if you set `--target_asr True` for the `finetune.py` and `evaluation.py` scripts.
