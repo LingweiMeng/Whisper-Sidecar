@@ -4,18 +4,20 @@ import random
 
 import jsonlines
 
-librispeech_dir = "./dataset/LibriSpeech/train*"
-enroll_path ="./dataset/LibriMix_enroll_audio/all"
+librispeech_dir = "./dataset/LibriSpeech/*"
+enroll_path = "./dataset/enroll_audios/all"
+
+if not os.path.exists(enroll_path):
+    os.makedirs(enroll_path)
 
 speaker_dirs = glob.glob(f"{librispeech_dir}/*")
 new_files = []
 for speaker_dir in speaker_dirs:
-    if ".TXT" in speaker_dir:
+    if not "train-" in speaker_dir and not "test-" in speaker_dir and not "dev-" in speaker_dir:
         continue
     speaker_id = os.path.basename(speaker_dir)
     enroll_speaker_dir = os.path.join(enroll_path, speaker_id)
     if not os.path.exists(enroll_speaker_dir):
-        print(f"{enroll_speaker_dir} not exists")
         os.makedirs(enroll_speaker_dir, exist_ok=True)
     # Check whether each speaker in librispeech_dir exists in enroll_path
     if len(glob.glob(f"{enroll_speaker_dir}/*.wav")) == 0:

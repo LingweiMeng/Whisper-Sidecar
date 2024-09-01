@@ -8,14 +8,18 @@ https://arxiv.org/abs/2407.09817
 
 ![](./img/framework.png)
 ## Data
-For mixed multi talker audio file generation:
+### Overlapped multi-talker audio file generation
+Please refer to:
 - LibriMix: https://github.com/JorisCos/LibriMix
 - LibriSpeechMix: https://github.com/NaoyukiKanda/LibriSpeechMix
 - Aishell1Mix: https://github.com/huangzj421/Aishell1Mix
 
 And organize the data list as jsonl files, such as `./Whisper-Sidecar/dataset/libri2mix_train.jsonl`
 
-For performing target talker ASR task, use the script `./Whisper-Sidecar/dataset/select_prompt_wav.py` to collect the enrolled prompt wav files.
+### Performing the Target Talker ASR Task on LibriMix and LibriSpeechMix
+Please use the script `./Whisper-Sidecar/dataset/select_prompt_wav.py` to collect the enrolled prompt wav files under `./Whisper-Sidecar/dataset/enroll_audio`. 
+
+The enrolled prompt audios will be concatenate with the overlapped speech with `DataCollatorSpeechSeq2SeqWithPadding`, if you set `--target_asr True` for the `finetune.py` and `evaluation.py` scripts.
 
 ## Usage
 
@@ -26,6 +30,7 @@ python ./finetune.py     # training
 python ./evaluation.py   # finetune
 ```
 
+If you want to perform target-talker speech recognition, please set `--target_asr True` for `finetune.py` and `evaluation.py`.
 
 ## Citations
 If you find our work inspiring or use our codebase in your research, please consider giving a star ⭐ and citations.
@@ -42,7 +47,7 @@ If you find our work inspiring or use our codebase in your research, please cons
 @inproceedings{meng2023sidecar,
   title={{A Sidecar Separator Can Convert a Single-Talker Speech Recognition System to a Multi-Talker One}}, 
   author={Meng, Lingwei and Kang, Jiawen and Cui, Mingyu and Wang, Yuejiao and Wu, Xixin and Meng, Helen},
-  booktitle={ICASSP}, 
+  booktitle={IEEE ICASSP}, 
   year={2023}
 }
 

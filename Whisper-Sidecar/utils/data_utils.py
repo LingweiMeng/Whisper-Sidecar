@@ -70,7 +70,7 @@ class DataCollatorSpeechSeq2SeqWithPadding:
             target_idx = [random.choice(range(self.num_spks)) for _ in range(len(speakers))]
             target_speaker = [speakers[i][idx] for i, idx in enumerate(target_idx)]
             train_split = [f['train_split'] for f in features]
-            enroll_audio_path = [os.path.join("./dataset/LibriMix_enroll_audio/", train_split, target_spk, target_spk + ".wav") for target_spk, train_split in zip(target_speaker, train_split)]
+            enroll_audio_path = [os.path.join("./dataset/enroll_audios/", train_split, target_spk, target_spk + ".wav") for target_spk, train_split in zip(target_speaker, train_split)]
             enroll_audios = [sf.read(path)[0] for path in enroll_audio_path]
             raw_audios = [np.concatenate([enroll[:int(16000 * 3)], np.zeros(int(16000 * 0.2)), sample]) for enroll, sample in zip(enroll_audios, raw_audios)]
             batch["target_speaker"] = torch.tensor(target_idx, dtype=torch.long)
@@ -79,7 +79,7 @@ class DataCollatorSpeechSeq2SeqWithPadding:
             # select all speakers as the target speaker, and enroll the prompt audio
             target_speaker = [speakers[i][j] for i in range(len(speakers)) for j in range(self.num_spks)]
             train_split = [f['train_split'] for f in features for _ in range(self.num_spks)]
-            enroll_audio_path = [os.path.join("./dataset/LibriMix_enroll_audio/", train_split, target_spk, target_spk + ".wav") for target_spk, train_split in zip(target_speaker, train_split)]
+            enroll_audio_path = [os.path.join("./dataset/enroll_audios/", train_split, target_spk, target_spk + ".wav") for target_spk, train_split in zip(target_speaker, train_split)]
             enroll_audios = [sf.read(path)[0] for path in enroll_audio_path]
             # interleave repeat raw_audios num_spks times
             raw_audios = [raw_audios[i//self.num_spks] for i in range(len(raw_audios)*self.num_spks)]
