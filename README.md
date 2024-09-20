@@ -4,7 +4,7 @@ This repository is the open source code for our INTERSPEECH 2024 paper:
 
 **Empowering Whisper as a Joint Multi-Talker and Target-Talker Speech Recognition System**
 
-https://arxiv.org/abs/2407.09817
+https://www.isca-archive.org/interspeech_2024/meng24c_interspeech.html
 
 ![](./img/framework.png)
 ## Data
