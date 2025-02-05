@@ -26,8 +26,8 @@ The enrolled prompt audios will be concatenate with the overlapped speech with `
 ```
 pip install -r requirements.txt
 cd Whisper-Sidecar
-python ./finetune.py     # training
-python ./evaluation.py   # finetune
+torchrun --nproc_per_node=4 finetune.py   # training
+python ./evaluation.py                    # evaluation
 ```
 
 If you want to perform target-talker speech recognition, please set `--target_asr True` for `finetune.py` and `evaluation.py`.

@@ -51,7 +51,7 @@ add_arg("augment_config_path", type=str, default=None, help="data augmentation c
 add_arg("num_spks", type=int, default=2, help="max number of speakers in the training set")
 add_arg("sidecar_loc", type=int, default=1, help="location of sidecar")
 add_arg("soft_prompt_len", type=int, default=4, help="soft prompt in decoder input")
-add_arg("target_asr", type=strtobool, default='true', help="whether to train the target asr task")
+add_arg("target_asr", type=strtobool, default='false', help="whether to train the target asr task")
 
 args = parser.parse_args()
 world_size = int(os.environ.get("WORLD_SIZE", 1))

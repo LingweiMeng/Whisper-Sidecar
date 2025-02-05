@@ -71,7 +71,11 @@ class DataCollatorSpeechSeq2SeqWithPadding:
             target_speaker = [speakers[i][idx] for i, idx in enumerate(target_idx)]
             train_split = [f['train_split'] for f in features]
             enroll_audio_path = [os.path.join("./dataset/enroll_audios/", train_split, target_spk, target_spk + ".wav") for target_spk, train_split in zip(target_speaker, train_split)]
-            enroll_audios = [sf.read(path)[0] for path in enroll_audio_path]
+            try:
+                enroll_audios = [sf.read(path)[0] for path in enroll_audio_path]
+            except Exception as e:
+                print(e)
+                print("ERROR: `target_asr` is set. make sure the enroll audio is available.")
             raw_audios = [np.concatenate([enroll[:int(16000 * 3)], np.zeros(int(16000 * 0.2)), sample]) for enroll, sample in zip(enroll_audios, raw_audios)]
             batch["target_speaker"] = torch.tensor(target_idx, dtype=torch.long)
         elif self.target_asr and is_eval_dataset and for_target_asr_eval:
