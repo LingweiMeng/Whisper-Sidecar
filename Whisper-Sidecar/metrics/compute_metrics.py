@@ -23,6 +23,7 @@ def compute_wer(predictions, references):
             else:
                 incorrect += len(prediction)
                 total += len(prediction)
+                totalI += len(prediction)
         else:
             measures = compute_measures(reference, prediction)
             H, S, D, I = measures["hits"], measures["substitutions"], measures["deletions"], measures["insertions"]

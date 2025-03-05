@@ -17,22 +17,22 @@ from model.modeling_whisper_sidecar import WhisperSidecarForConditionalGeneratio
 from utils.data_utils import DataCollatorSpeechSeq2SeqWithPadding, remove_punctuation, to_simple
 from metrics.compute_metrics import compute_wer
 from utils.dataset import CustomDataset
-from utils.utils import print_arguments, add_arguments
+from utils.utils import print_arguments, add_arguments, strtobool
 
 parser = argparse.ArgumentParser(description=__doc__)
 add_arg = functools.partial(add_arguments, argparser=parser)
 add_arg("test_data", type=str, default="dataset/libri2mix_test.jsonl", help="the path of the test set")
-add_arg("model_path", type=str, default=r"output/checkpoint.pt", help="checkpoint path for evaluation")
-add_arg("batch_size", type=int, default=32)
-add_arg("num_workers", type=int, default=8)
+add_arg("model_path", type=str, default=r"output/checkpoint-last", help="checkpoint path for evaluation")
+add_arg("batch_size", type=int, default=32, help="batch size for eval")
+add_arg("num_workers", type=int, default=8, help="num of workers")
 add_arg("language", type=str, default="en", help="en or zh. if it is None, it is trained to be multilingual")
-add_arg("remove_pun", type=bool, default=True,)
+add_arg("remove_pun", type=bool, default=True, help="if remove punc when eval")
 add_arg("timestamps", type=strtobool, default='false', help="whether to use timestamp data during training")
 add_arg("min_audio_len", type=float, default=0.5, help="min audio length, in seconds")
 add_arg("max_audio_len", type=float, default=30, help="max audio length, in seconds")
 add_arg("local_files_only", type=bool, default=False, help="whether to only load the model locally")
-add_arg("task", type=str, default="transcribe", choices=['transcribe', 'translate'])
-add_arg("metric", type=str, default="wer", choices=['cer', 'wer'],)
+add_arg("task", type=str, default="transcribe", choices=['transcribe', 'translate'], help="choice task")
+add_arg("metric", type=str, default="wer", choices=['cer', 'wer'], help="choice eval metric")
 
 # the following parameters need to be manually set to match those used during training.
 add_arg("num_spks", type=int, default=2, help="max number of speakers in the training set")
@@ -51,7 +51,8 @@ processor = WhisperProcessor.from_pretrained(args.model_path,
                                              language=args.language,
                                              task=args.task,
                                              no_timestamps=not args.timestamps,
-                                             local_files_only=args.local_files_only)
+                                             local_files_only=args.local_files_only,
+                                             )
 
 model = WhisperSidecarForConditionalGeneration.from_pretrained(args.model_path,
                                                         device_map="auto",
@@ -60,7 +61,9 @@ model = WhisperSidecarForConditionalGeneration.from_pretrained(args.model_path,
                                                         num_spks=args.num_spks,
                                                         soft_prompt_len=args.soft_prompt_len,
                                                         target_asr=args.target_asr,
-                                                        for_target_asr_eval=args.target_asr)
+                                                        for_target_asr_eval=args.target_asr,
+                                                        attn_implementation="sdpa",
+                                                        )
 model.eval()
 
 test_dataset = CustomDataset(data_list_path=args.test_data,
@@ -128,11 +131,13 @@ for step, batch in enumerate(tqdm(eval_dataloader)):
                 decoded_labels = to_simple(decoded_labels)
 
                 decoded_preds = [t.replace(' ', '') for t in decoded_preds]
+                decoded_labels = [t.replace(' ', '') for t in decoded_labels]
 
                 decoded_preds = [t.replace('', ' ').strip() for t in decoded_preds]
                 decoded_labels = [t.replace('', ' ').strip() for t in decoded_labels]
 
                 decoded_preds = [re.sub(r'([a-zA-Z0-9])\s+(?=[a-zA-Z0-9])', r'\1', t) for t in decoded_preds]
+                decoded_labels = [re.sub(r'([a-zA-Z0-9])\s+(?=[a-zA-Z0-9])', r'\1', t) for t in decoded_labels]
 
 
             decoded_preds = np.array(decoded_preds)

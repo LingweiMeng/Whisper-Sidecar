@@ -38,7 +38,7 @@ add_arg("eval_delay", type=int, default=15, help="eval after x epoches")
 add_arg("gradient_accumulation_steps", type=int, default=1, help="gradient accumulation")
 add_arg("per_device_train_batch_size", type=int, default=16, help="training batch size")
 add_arg("per_device_eval_batch_size", type=int, default=4, help="eval batch size")
-add_arg("num_workers", type=int, default=1, help="Number of threads for reading data")
+add_arg("num_workers", type=int, default=8, help="Number of threads for reading data")
 add_arg("language", type=str, default="en", help="en or zh. if it is None, it is trained to be multilingual")
 add_arg("timestamps", type=strtobool, default='false', help="whether to use timestamp data during training")
 add_arg("min_audio_len", type=float, default=0.5,  help="min audio length, in seconds")
@@ -107,11 +107,14 @@ model = WhisperSidecarForConditionalGeneration.from_pretrained(model_path,
                                                         sidecar_loc=args.sidecar_loc,
                                                         num_spks=args.num_spks,
                                                         soft_prompt_len=args.soft_prompt_len,
-                                                        target_asr=args.target_asr
+                                                        target_asr=args.target_asr,
+                                                        attn_implementation="sdpa",
                                                         )
 
 # setting for decoder soft_prompt
 if args.soft_prompt_len > 0:
+    if not hasattr(model.generation_config, "prev_sot_token_id"):
+        model.generation_config.prev_sot_token_id = 50361
     model.generation_config.decoder_start_token_id = model.generation_config.prev_sot_token_id
     model.config.decoder_start_token_id = model.generation_config.prev_sot_token_id
     startoftranscript_id = processor.tokenizer.convert_tokens_to_ids('<|startoftranscript|>')
@@ -121,6 +124,7 @@ else:
     startoftranscript_id = processor.tokenizer.convert_tokens_to_ids('<|startoftranscript|>')
     model.generation_config.decoder_start_token_id = startoftranscript_id
     model.config.forced_decoder_ids = processor.get_decoder_prompt_ids()
+print(f"Forced decoding tokens: {model.config.forced_decoder_ids}")
 
 model.config.suppress_tokens = []
 model.generation_config.max_new_tokens = 200
@@ -135,7 +139,7 @@ for name, params in model.named_parameters():
     params.requires_grad = False
     if 'sidecar' in name or 'sep_enc' in name or 'sep_dec' in name or 'soft_prompt_embeds' in name or 'proj_target' in name:
         params.requires_grad = True
-        if args.resume_from_checkpoint or "openai/whisper" not in args.base_model:
+        if args.resume_from_checkpoint or "sidecar" in args.base_model:
             continue
         if 'bias' in name:
             torch.nn.init.constant_(params, 0.0)
@@ -195,7 +199,9 @@ trainer = Seq2SeqTrainer(args=training_args,
                         #  preprocess_logits_for_metrics=preprocess_logits_for_metrics,
                          compute_metrics=wer_cal
 )
-model.config.use_cache = False
+
+# model.config.use_cache = False
+model.generation_config.use_cache = True
 trainer._load_from_checkpoint = load_from_checkpoint
 
 # start training
