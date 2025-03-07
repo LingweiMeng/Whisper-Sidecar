@@ -15,7 +15,7 @@ class SaveCheckpointCallback(TrainerCallback):
             # Save the best model
             best_checkpoint_folder = os.path.join(args.output_dir, f"{PREFIX_CHECKPOINT_DIR}-best")
 
-            if state.best_model_checkpoint and os.path.exists(state.best_model_checkpoint):
+            if state.best_model_checkpoint is not None and os.path.exists(state.best_model_checkpoint):
                 if os.path.exists(best_checkpoint_folder):
                     shutil.rmtree(best_checkpoint_folder)
                 shutil.copytree(state.best_model_checkpoint, best_checkpoint_folder)

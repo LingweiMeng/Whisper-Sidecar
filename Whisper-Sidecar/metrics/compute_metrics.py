@@ -125,28 +125,34 @@ class WhisperOverlapWERCalculator:
         if self.soft_prompt_len > 0:
             pred_ids = pred_ids[:, 1+self.soft_prompt_len:]
             label_ids = label_ids[:, self.soft_prompt_len:]     # no decoder_start_token_id
-        
+
         # Convert the predicted and ground truth tokens into text.
         if self.processor.tokenizer.language == 'zh':
             decoded_preds = self.processor.tokenizer.batch_decode(pred_ids, skip_special_tokens=True, basic_normalize=True)
             decoded_labels = self.processor.tokenizer.batch_decode(label_ids, skip_special_tokens=True, basic_normalize=True) 
 
+            decoded_preds = remove_punctuation(decoded_preds)
+            decoded_labels = remove_punctuation(decoded_labels)
+
             decoded_preds = to_simple(decoded_preds)
             decoded_labels = to_simple(decoded_labels)
 
             decoded_preds = [t.replace(' ', '') for t in decoded_preds]
+            decoded_labels = [t.replace(' ', '') for t in decoded_labels]
 
             decoded_preds = [t.replace('', ' ').strip() for t in decoded_preds]
             decoded_labels = [t.replace('', ' ').strip() for t in decoded_labels]
 
             decoded_preds = [re.sub(r'([a-zA-Z0-9])\s+(?=[a-zA-Z0-9])', r'\1', t) for t in decoded_preds]
+            decoded_labels = [re.sub(r'([a-zA-Z0-9])\s+(?=[a-zA-Z0-9])', r'\1', t) for t in decoded_labels]
+
         else:
             decoded_preds = self.processor.tokenizer.batch_decode(pred_ids, skip_special_tokens=True, normalize=True)
             decoded_labels = self.processor.tokenizer.batch_decode(label_ids, skip_special_tokens=True, normalize=True)      
 
-        decoded_preds = remove_punctuation(decoded_preds)
-        decoded_labels = remove_punctuation(decoded_labels)
-        
+            decoded_preds = remove_punctuation(decoded_preds)
+            decoded_labels = remove_punctuation(decoded_labels)
+
         # # remove samples with empty ref
         # for i, (_, label) in enumerate(zip(pred_str, label_str)):
         #     if not label:

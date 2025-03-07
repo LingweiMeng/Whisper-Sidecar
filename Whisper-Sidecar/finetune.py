@@ -70,11 +70,9 @@ processor = WhisperProcessor.from_pretrained(args.base_model,
                                              local_files_only=args.local_files_only)
 processor.save_pretrained(os.path.join(output_dir, "tokenizer"))
 
-arg_path = os.path.join(output_dir, "finetune_config.json")
-with open(arg_path, 'w') as f:
+with open(os.path.join(output_dir, "finetune_config.json"), 'w') as f:
     json.dump(vars(args), f, ensure_ascii=False, indent=2)
-
-
+    
 train_dataset = CustomDataset(data_list_path=args.train_data,
                               processor=processor,
                               language=args.language,
@@ -131,7 +129,7 @@ model.generation_config.max_new_tokens = 200
 
 
 # Register forward, otherwise the multi-GPU training will fail.
-model.model.encoder.conv1.register_forward_hook(make_inputs_require_grad)
+model.get_encoder().conv1.register_forward_hook(make_inputs_require_grad)
 
 
 # init model parameters
@@ -182,8 +180,12 @@ if training_args.local_rank == 0 or training_args.local_rank == -1:
     print(model)
     print_arguments(args)
     print(f"world_size: {world_size}")
-    print(f"Model Name：{model_name}")
-    print(f"Training data：{len(train_dataset)}，Eval data：{len(dev_dataset)}")
+    print(f"Model Name: {model_name}")
+    print(f"Training data: {len(train_dataset)}, Eval data: {len(dev_dataset)}")
+    print(f"Trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}, ", 
+          f"All parameters: {sum(p.numel() for p in model.parameters())}")
+    print("------------------------------------------------")
+
 
 wer_cal = WhisperOverlapWERCalculator(processor=processor, num_spks=args.num_spks, soft_prompt_len=args.soft_prompt_len)
 

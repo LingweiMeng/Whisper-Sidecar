@@ -179,13 +179,13 @@ for step, batch in enumerate(tqdm(eval_dataloader)):
             incorrect_words += np.array(incorrects_perm)[np.arange(len(wers_perm)), wers_order].sum()
 
             count = 0
-            for pair in zip (decoded_labels, decoded_preds):
+            for pair in zip(decoded_labels, decoded_preds):
                 print('\nLABEL: ', pair[0])
                 print(' PRED: ', pair[1])
                 count += 1
                 if count % args.num_spks == 0:
                     print('\n'+'-' * 20)
-            print('='*100, total_words, incorrect_words)
+            print('='*100, total_words, incorrect_words, round(incorrect_words/total_words, 4))
 
     # del generated_tokens, labels, batch
     # gc.collect()
@@ -193,3 +193,4 @@ for step, batch in enumerate(tqdm(eval_dataloader)):
 print_arguments(args)
 m = 100 * (incorrect_words / total_words)
 print(f"Results: {args.metric}={round(m, 5)}")
+
