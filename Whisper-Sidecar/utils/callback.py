@@ -22,7 +22,7 @@ class SaveCheckpointCallback(TrainerCallback):
 
             print("\n" + "="*100)
             print(f"\nLatest saved checkpoint: {os.path.join(args.output_dir, f'{PREFIX_CHECKPOINT_DIR}-{state.global_step}')}")
-            print(f"\nBest checkpoint: {state.best_model_checkpoint}\nWER: {state.best_metric}")
+            print(f"\nBest checkpoint: {state.best_model_checkpoint}\nBest WER: {state.best_metric}")
             print(f"\nthe reported evaluation loss is meaningless and should be ignored.\n")
             print("="*100 + "\n")
         return control

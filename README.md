@@ -32,6 +32,17 @@ python ./evaluation.py                    # evaluation
 
 If you want to perform target-talker speech recognition, please set `--target_asr True` for `finetune.py` and `evaluation.py`.
 
+## Related works
+- **Large language model** can transcribe multi-talker speech with **versatile instructions**
+ [![arXiv](https://img.shields.io/badge/arXiv-2409.08596-b31b1b.svg?style=flat)](https://arxiv.org/abs/2409.08596)
+- Sidecar: Convert **single-talker** speech recognition systems to **multi-talker** [![arXiv](https://img.shields.io/badge/arXiv-2302.09908-b31b1b.svg?style=flat)](https://arxiv.org/abs/2302.09908)
+- Unified modeling of **multi-talker** speech recognition and **diarization** [![arXiv](https://img.shields.io/badge/arXiv-2305.16263-b31b1b.svg?style=flat)](https://arxiv.org/abs/2305.16263)
+- SA-CTC: A **speaker-aware CTC** for multi-talker overlapped speech recognition [![arXiv](https://img.shields.io/badge/arXiv-2409.12388-b31b1b.svg?style=flat)](https://arxiv.org/abs/2409.12388)
+ [![Static Badge](https://img.shields.io/badge/Github-SACTC-blue)](https://github.com/kjw11/Speaker-Aware-CTC)
+- CSE-NET: A **SOTA network** architecture for multi-talker speech recognition
+ [![arXiv](https://img.shields.io/badge/arXiv-2401.04152-b31b1b.svg?style=flat)](https://arxiv.org/abs/2401.04152)
+ [![Static Badge](https://img.shields.io/badge/Github-CSE--NET-blue)](https://github.com/kjw11/CSEnet-ASR)
+
 ## Citations
 If you find our work inspiring or use our codebase in your research, please consider giving a star ⭐ and citations.
 

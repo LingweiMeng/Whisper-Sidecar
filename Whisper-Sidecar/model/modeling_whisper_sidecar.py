@@ -55,13 +55,18 @@ class WhisperSidecarEncoder(WhisperEncoder):
 
         self.num_spks = num_spks
         self.num_perms = math.perm(self.num_spks, self.num_spks)
-        self.sidecar_loc = sidecar_loc
-        self.sep_enc = nn.Conv1d(embed_dim, embed_dim, 3, stride=1, padding='same')
-        self.sidecar = Sidecar(N=embed_dim, B=128, H=embed_dim, num_spks=self.num_spks)
-        self.sep_dec = nn.Conv1d(embed_dim, embed_dim, 3, stride=1, padding='same')
-        self.target_asr = target_asr
+        if sidecar_loc and sidecar_loc >= -1:
+            self.sidecar_loc = sidecar_loc
+            self.sep_enc = nn.Conv1d(embed_dim, embed_dim, 3, stride=1, padding='same')
+            self.sidecar = Sidecar(N=embed_dim, B=128, H=embed_dim, num_spks=self.num_spks)
+            self.sep_dec = nn.Conv1d(embed_dim, embed_dim, 3, stride=1, padding='same')
+            self.target_asr = target_asr
+        else:
+            assert self.num_spks == 1, "The num_spks should be 1 when sidecar is disabled."
+            self.sidecar_loc = None
+            self.target_asr = None
 
-        if target_asr:
+        if self.target_asr:
             self.proj_target = nn.Linear(embed_dim, 1)
             self.proj_target_2  = nn.Linear(150, 1)
             self.for_target_asr_eval = for_target_asr_eval
@@ -367,12 +372,19 @@ class WhisperSidecarForConditionalGeneration(WhisperForConditionalGeneration):
         self.target_asr = target_asr
 
         if self.soft_prompt_len > 0:
-            self.soft_prompt_embeds = nn.Parameter(torch.randn(self.soft_prompt_len, config.d_model))
+            self.soft_prompt_embeds = nn.Embedding(self.soft_prompt_len, config.d_model)
             self.register_soft_prompt_hook()
 
-    
         # Initialize weights and apply final processing
         self.post_init()
+
+    def param_init(self, modules_to_save):
+        for name, params in self.named_parameters():
+            if any(e in name for e in modules_to_save):
+                if 'bias' in name:
+                    torch.nn.init.constant_(params, 0.0)
+                if 'weight' in name or 'soft_prompt_embeds' in name:
+                    torch.nn.init.normal_(params, mean=0.0, std=0.02)
 
     def forward(
         self,
@@ -497,10 +509,10 @@ class WhisperSidecarForConditionalGeneration(WhisperForConditionalGeneration):
                 input_ids = input_ids[0].reshape(-1)
                 if (100 <= input_ids[0] < 100+self.soft_prompt_len) and torch.all(input_ids.eq(input_ids[0])):
                     # relace the fake token with the soft prompt
-                    inputs_embeds[:] = self.soft_prompt_embeds[input_ids[0]-100]
+                    inputs_embeds[:] = self.soft_prompt_embeds.weight[input_ids[0]-100]
             else:
                 # training or teacher-forcing evaluation
-                inputs_embeds[:, 1:self.soft_prompt_embeds.shape[0]+1] = self.soft_prompt_embeds
+                inputs_embeds[:, 1:self.soft_prompt_embeds.weight.shape[0]+1] = self.soft_prompt_embeds.weight
             return inputs_embeds
 
         self.model.decoder.embed_tokens.register_forward_hook(decoder_soft_prompt_hook)

@@ -64,6 +64,9 @@ class DataCollatorSpeechSeq2SeqWithPadding:
         batch = {}
         raw_audios = [feature['raw_audio'] for feature in features]
 
+        if is_eval_dataset:
+            batch["path"] = [f['path'] for f in features]
+
         if self.target_asr and random.random() < 0.2 and not is_eval_dataset:
             speakers = [f['speakers'] for f in features]       # (B, num_spks)
             # randomly select a speaker as the target speaker, and enroll the prompt audio.
@@ -84,8 +87,11 @@ class DataCollatorSpeechSeq2SeqWithPadding:
             target_speaker = [speakers[i][j] for i in range(len(speakers)) for j in range(self.num_spks)]
             train_split = [f['train_split'] for f in features for _ in range(self.num_spks)]
             enroll_audio_path = [os.path.join("./dataset/enroll_audios/", train_split, target_spk, target_spk + ".wav") for target_spk, train_split in zip(target_speaker, train_split)]
-            enroll_audios = [sf.read(path)[0] for path in enroll_audio_path]
-            # interleave repeat raw_audios num_spks times
+            try:
+                enroll_audios = [sf.read(path)[0] for path in enroll_audio_path]
+            except Exception as e:
+                print(e)
+                print("ERROR: `target_asr` is set. make sure the enroll audio is available.")            # interleave repeat raw_audios num_spks times
             raw_audios = [raw_audios[i//self.num_spks] for i in range(len(raw_audios)*self.num_spks)]
             raw_audios = [np.concatenate([enroll[:int(16000 * 3)], np.zeros(int(16000 * 0.2)), sample]) for enroll, sample in zip(enroll_audios, raw_audios)]
             batch["target_speaker"] = torch.tensor(list(range(self.num_spks)) * len(features), dtype=torch.long)

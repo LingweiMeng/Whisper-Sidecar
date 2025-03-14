@@ -13,6 +13,7 @@ from utils.model_utils import load_from_checkpoint
 from utils.dataset import CustomDataset
 from utils.utils import print_arguments, make_inputs_require_grad, add_arguments, strtobool
 from metrics.compute_metrics import WhisperOverlapWERCalculator
+from peft import LoraConfig, get_peft_model, PeftConfig, AdaLoraConfig, PeftModel, prepare_model_for_kbit_training
 
 
 parser = argparse.ArgumentParser(description=__doc__)
@@ -48,6 +49,8 @@ add_arg("task", type=str, default="transcribe", choices=['transcribe', 'translat
 add_arg("augment_config_path", type=str, default=None, help="data augmentation configuration file path")
 
 # model custom config
+add_arg("use_lora", type=strtobool, default='false', help="whether to train lora")
+add_arg("use_adalora", type=strtobool,  default='false', help="whether use adalora instead of lora")
 add_arg("num_spks", type=int, default=2, help="max number of speakers in the training set")
 add_arg("sidecar_loc", type=int, default=1, help="location of sidecar")
 add_arg("soft_prompt_len", type=int, default=4, help="soft prompt in decoder input")
@@ -56,14 +59,26 @@ add_arg("target_asr", type=strtobool, default='false', help="whether to train th
 args = parser.parse_args()
 world_size = int(os.environ.get("WORLD_SIZE", 1))
 
-if 'whisper-' in args.base_model: 
-    model_name = f"{os.path.basename(args.base_model).split('whisper-')[1]}_{args.model_name}"
-else:
-    model_name = f"{args.model_name}_{args.base_model.split('/')[-2]}"
+# if 'whisper-' in args.base_model: 
+#     model_name = f"{os.path.basename(args.base_model).split('whisper-')[1]}_{args.model_name}"
+# else:
+#     model_name = f"{args.model_name}_{args.base_model.split('/')[-2]}"
+
+model_name = args.model_name
 output_dir = os.path.join(args.output_dir, model_name)
 
+try:
+    peft_config = PeftConfig.from_pretrained(args.resume_from_checkpoint if args.resume_from_checkpoint is not None else args.base_model)
+    args.use_adalora = True if peft_config.peft_type == "ADALORA" else args.use_adalora
+    base_base_model = peft_config.base_model_name_or_path
+    print("The base model is with LoRA.")
+except:
+    base_base_model = args.base_model
+    peft_config = None
+
+
 # Get WhisperProcessor, which includes cnn feature extractor and tokenizer
-processor = WhisperProcessor.from_pretrained(args.base_model,
+processor = WhisperProcessor.from_pretrained(base_base_model,
                                              language=args.language,
                                              task=args.task,
                                              no_timestamps=True,
@@ -107,7 +122,34 @@ model = WhisperSidecarForConditionalGeneration.from_pretrained(model_path,
                                                         soft_prompt_len=args.soft_prompt_len,
                                                         target_asr=args.target_asr,
                                                         attn_implementation="sdpa",
-                                                        )
+
+modules_to_save = ['sidecar', 'sep_enc', 'sep_dec', 'soft_prompt_embeds', 'proj_target']
+print(f"Modules to train and save: {modules_to_save}")
+
+if peft_config is not None:
+    print(f'loading LoRA modules... if_train_lora = {args.use_lora}')
+    peft_config.modules_to_save = modules_to_save
+    model = PeftModel.from_pretrained(model, model_path, is_trainable=True if args.use_lora else False, config=peft_config)
+elif args.use_lora:
+    print(f'adding LoRA modules...')
+    target_modules = ["k_proj", "q_proj", "v_proj", "out_proj", "fc1", "fc2"]
+    print(target_modules)
+    if args.use_adalora:
+        peft_config = AdaLoraConfig(init_r=12, target_r=4, beta1=0.85, beta2=0.85, tinit=200, tfinal=1000, deltaT=10,
+                                    lora_alpha=32, lora_dropout=0.1, orth_reg_weight=0.5, target_modules=target_modules, modules_to_save=modules_to_save)
+    else:
+        peft_config = LoraConfig(r=32, lora_alpha=64, target_modules=target_modules,
+                                    lora_dropout=0.05, bias="none", modules_to_save=modules_to_save)
+else:
+    # init model parameters
+    for name, params in model.named_parameters():
+        params.requires_grad = False
+        if any(e in name for e in modules_to_save) or ("lora" in name and args.use_lora):
+            params.requires_grad = True
+
+if not (args.resume_from_checkpoint or "sidecar" in args.base_model):
+    model.param_init(modules_to_save)
+
 
 # setting for decoder soft_prompt
 if args.soft_prompt_len > 0:
@@ -130,19 +172,6 @@ model.generation_config.max_new_tokens = 200
 
 # Register forward, otherwise the multi-GPU training will fail.
 model.get_encoder().conv1.register_forward_hook(make_inputs_require_grad)
-
-
-# init model parameters
-for name, params in model.named_parameters():
-    params.requires_grad = False
-    if 'sidecar' in name or 'sep_enc' in name or 'sep_dec' in name or 'soft_prompt_embeds' in name or 'proj_target' in name:
-        params.requires_grad = True
-        if args.resume_from_checkpoint or "sidecar" in args.base_model:
-            continue
-        if 'bias' in name:
-            torch.nn.init.constant_(params, 0.0)
-        if 'weight' in name or 'soft_prompt_embeds' in name:
-            torch.nn.init.normal_(params, mean=0.0, std=0.02)
 
 
 # training args
@@ -200,9 +229,9 @@ trainer = Seq2SeqTrainer(args=training_args,
                          callbacks=[SaveCheckpointCallback],
                         #  preprocess_logits_for_metrics=preprocess_logits_for_metrics,
                          compute_metrics=wer_cal
-)
+                        )
 
-# model.config.use_cache = False
+model.config.use_cache = True
 model.generation_config.use_cache = True
 trainer._load_from_checkpoint = load_from_checkpoint
 

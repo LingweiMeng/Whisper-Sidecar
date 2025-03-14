@@ -39,6 +39,7 @@ add_arg("num_spks", type=int, default=2, help="max number of speakers in the tra
 add_arg("sidecar_loc", type=int, default=1, help="location of sidecar")
 add_arg("soft_prompt_len", type=int, default=4, help="soft prompt in decoder input")
 add_arg("target_asr", type=strtobool, default='false', help="whether to train the target asr task")
+add_arg("save_path", type=str, default=None, help="save the predicted texts")
 
 args = parser.parse_args()
 print_arguments(args)
@@ -65,6 +66,7 @@ model = WhisperSidecarForConditionalGeneration.from_pretrained(args.model_path,
                                                         attn_implementation="sdpa",
                                                         )
 model.eval()
+model.generation_config.use_cache = True
 
 test_dataset = CustomDataset(data_list_path=args.test_data,
                              processor=processor,
@@ -82,6 +84,8 @@ eval_dataloader = DataLoader(test_dataset, batch_size=args.batch_size,
                              num_workers=args.num_workers, collate_fn=data_collator)
 
 if args.soft_prompt_len > 0:
+    if not hasattr(model.generation_config, "prev_sot_token_id"):
+        model.generation_config.prev_sot_token_id = 50361
     model.generation_config.decoder_start_token_id = model.generation_config.prev_sot_token_id
     model.config.decoder_start_token_id = model.generation_config.prev_sot_token_id
     startoftranscript_id = processor.tokenizer.convert_tokens_to_ids('<|startoftranscript|>')
@@ -178,13 +182,24 @@ for step, batch in enumerate(tqdm(eval_dataloader)):
             total_words += np.array(totals_perm)[np.arange(len(wers_perm)), wers_order].sum()
             incorrect_words += np.array(incorrects_perm)[np.arange(len(wers_perm)), wers_order].sum()
 
-            count = 0
-            for pair in zip(decoded_labels, decoded_preds):
-                print('\nLABEL: ', pair[0])
-                print(' PRED: ', pair[1])
-                count += 1
-                if count % args.num_spks == 0:
-                    print('\n'+'-' * 20)
+            for i, (label_group, pred_group) in enumerate(zip(
+                decoded_labels.reshape(-1, args.num_spks), 
+                decoded_preds.reshape(-1, args.num_spks)
+            )):
+                print('\n' + '-'*20)
+                print(batch["path"][i])
+
+                for lbl, pred in zip(label_group, pred_group):
+                    print('\nLABEL:', lbl)
+                    print(' PRED:', pred)
+
+                if args.save_path is not None:
+                    with open(args.save_path, "a") as f:
+                        label_group = '|'.join(label_group).replace(' ', '') if args.language == 'zh' else '|'.join(label_group)
+                        pred_group = '|'.join(pred_group).replace(' ', '') if args.language == 'zh' else '|'.join(pred_group)
+                        line = f"{batch['path'][i]}\t{label_group}\t{pred_group}\n"
+                        f.write(line)
+
             print('='*100, total_words, incorrect_words, round(incorrect_words/total_words, 4))
 
     # del generated_tokens, labels, batch

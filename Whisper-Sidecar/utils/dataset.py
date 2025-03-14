@@ -182,6 +182,7 @@ class CustomDataset(Dataset):
             data['train_split'] = "all"
             data['is_eval_dataset'] = self.is_eval_dataset
             data['for_target_asr_eval'] = self.for_target_asr_eval
+            data['path'] = audio_file
 
             return data
         except Exception as e:
