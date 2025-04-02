@@ -34,7 +34,7 @@ If you want to perform target-talker speech recognition, please set `--target_as
 
 ## Related works
 - **Large language model** can transcribe multi-talker speech with **versatile instructions**
- [![arXiv](https://img.shields.io/badge/arXiv-2409.08596-b31b1b.svg?style=flat)](https://arxiv.org/abs/2409.08596)
+ [![arXiv](https://img.shields.io/badge/arXiv-2409.08596-b31b1b.svg?style=flat)](https://arxiv.org/abs/2409.08596) [![Static Badge](https://img.shields.io/badge/Github-MT--LLM-blue)](https://github.com/cuhealthybrains/MT-LLM)
 - Sidecar: Convert **single-talker** speech recognition systems to **multi-talker** [![arXiv](https://img.shields.io/badge/arXiv-2302.09908-b31b1b.svg?style=flat)](https://arxiv.org/abs/2302.09908)
 - Unified modeling of **multi-talker** speech recognition and **diarization** [![arXiv](https://img.shields.io/badge/arXiv-2305.16263-b31b1b.svg?style=flat)](https://arxiv.org/abs/2305.16263)
 - SA-CTC: A **speaker-aware CTC** for multi-talker overlapped speech recognition [![arXiv](https://img.shields.io/badge/arXiv-2409.12388-b31b1b.svg?style=flat)](https://arxiv.org/abs/2409.12388)
