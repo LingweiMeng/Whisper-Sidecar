@@ -478,8 +478,8 @@ class WhisperSidecarForConditionalGeneration(WhisperForConditionalGeneration):
                     best_perm = [list(list(itertools.permutations(range(self.num_spks)))[i]) for i in loss_min_idx]
                     target_spk_logits = outputs['target_spk_logits'][torch.arange(len(best_perm)).unsqueeze(1), best_perm]
                     target_spk_loss = loss_fct(target_spk_logits.to(torch.float32), target_speaker).mean() * 0.01
-                    acc = (torch.argmax(target_spk_logits, dim=1) == target_speaker).float().mean()
-                    print(acc, target_spk_loss * 100)
+                    # acc = (torch.argmax(target_spk_logits, dim=1) == target_speaker).float().mean()
+                    # print(acc, target_spk_loss * 100)
                 else:
                     target_spk_loss = self.model.encoder.proj_target(torch.zeros(1, 1, outputs[0].shape[-1], device=outputs[0].device)).sum() * 0
                     target_spk_loss += self.model.encoder.proj_target_2(torch.zeros(1, 1, 150, device=outputs[0].device)).sum() * 0
