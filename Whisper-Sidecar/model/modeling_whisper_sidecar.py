@@ -232,7 +232,7 @@ class WhisperSidecarEncoder(WhisperEncoder):
             mask = torch.arange(self.num_spks, device=target_spk_idx.device) != target_spk_idx.unsqueeze(1)     # (B, num_spks)
             mask = mask.unsqueeze(-1).unsqueeze(-1)
             hidden_states = hidden_states.view(-1, self.num_spks, hidden_states.shape[-2], hidden_states.shape[-1])
-            hidden_states = hidden_states.masked_fill(mask, -100).view(-1, hidden_states.shape[-2], hidden_states.shape[-1])    # Block other spks
+            hidden_states = hidden_states.masked_fill(mask, -1e9).view(-1, hidden_states.shape[-2], hidden_states.shape[-1])    # Block other spks
 
 
         if not return_dict:
